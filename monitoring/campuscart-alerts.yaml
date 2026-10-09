@@ -1,0 +1,39 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: campuscart-alerts
+  namespace: monitoring
+  labels:
+    release: monitoring
+spec:
+  groups:
+    - name: campuscart
+      rules:
+        - alert: CampusCartBackendUnavailable
+          expr: |
+            kube_deployment_status_replicas_available{
+              namespace="campuscart",
+              deployment="backend"
+            } < 1
+          for: 1m
+          labels:
+            severity: critical
+            application: campuscart
+          annotations:
+            summary: CampusCart backend is unavailable
+            description: No backend replica has been available for one minute.
+
+        - alert: CampusCartApiServerErrors
+          expr: |
+            sum(increase(campuscart_http_requests_total{
+              namespace="campuscart",
+              route=~"/api/.*",
+              status=~"5.."
+            }[5m])) >= 3
+          for: 1m
+          labels:
+            severity: warning
+            application: campuscart
+          annotations:
+            summary: CampusCart API is returning server errors
+            description: At least three API server errors occurred within five minutes.

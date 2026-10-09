@@ -1,0 +1,22 @@
+alertmanager:
+  config:
+    global:
+      resolve_timeout: 5m
+
+    route:
+      receiver: "null"
+      group_by: ["alertname", "namespace"]
+      group_wait: 10s
+      group_interval: 30s
+      repeat_interval: 1h
+      routes:
+        - receiver: campuscart-webhook
+          matchers:
+            - application="campuscart"
+
+    receivers:
+      - name: "null"
+      - name: campuscart-webhook
+        webhook_configs:
+          - url: http://alert-webhook.monitoring.svc.cluster.local:8080/alerts
+            send_resolved: true
