@@ -63,7 +63,7 @@ jobs:
         if: github.event_name != 'pull_request'
         run: docker push "${IMAGE}:${GITHUB_SHA}"
 
-          update-deployment:
+  update-deployment:
     name: Update Kubernetes image versions
     needs: build
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
