@@ -1,0 +1,64 @@
+name: CampusCart CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Backend validation tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Build backend test image
+        run: docker build -t campuscart-test ./backend
+
+      - name: Run validation tests
+        run: |
+          docker run --rm campuscart-test \
+            python -m unittest discover -s app -p 'test_*.py' -v
+
+  build:
+    name: Build and publish images
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        service: [backend, frontend]
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set image name
+        shell: bash
+        run: |
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          echo "IMAGE=ghcr.io/${owner}/campuscart-${{ matrix.service }}" >> "$GITHUB_ENV"
+
+      - name: Build image
+        run: |
+          docker build \
+            --label "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}" \
+            -t "${IMAGE}:${GITHUB_SHA}" \
+            "./${{ matrix.service }}"
+
+      - name: Sign in to container registry
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          printf '%s' "$GH_TOKEN" |
+            docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+
+      - name: Publish image
+        if: github.event_name != 'pull_request'
+        run: docker push "${IMAGE}:${GITHUB_SHA}"
