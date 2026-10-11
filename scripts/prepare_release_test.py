@@ -22,7 +22,12 @@ with connect() as c:
     if len(p)>1: raise SystemExit('More than one probe product exists')
     if not p:
         c.execute("INSERT INTO products(name,description,price,stock,category,specifications) VALUES('Release verification test item','Reserved for pipeline experiments. Do not purchase.',1.00,100,'Stationery',%s)",(Jsonb({'release_probe':True}),))
+    controls=c.execute("SELECT id FROM products WHERE specifications->>'release_control'='true'").fetchall()
+    if len(controls)>1:raise SystemExit('More than one control product exists')
+    if not controls:
+        c.execute("INSERT INTO products(name,description,price,stock,category,specifications) VALUES('Release verification control item','Reserved for valid-path checks. Do not purchase.',1.00,100,'Stationery',%s)",(Jsonb({'release_control':True}),))
     c.execute("INSERT INTO pickup_locations(name,instructions) VALUES('Release verification desk','Reserved for automated experiments') ON CONFLICT(name) DO NOTHING")
+    c.execute("INSERT INTO pickup_locations(name,instructions) VALUES('Release verification control desk','Reserved for valid-path checks') ON CONFLICT(name) DO NOTHING")
 print('Dedicated test account, product and pickup location prepared.')
 '''
 if __name__ == '__main__':

@@ -10,8 +10,8 @@ on:
       verification_mode:
         description: Release verification mode (health is for comparison experiments)
         type: choice
-        options: [transactional, health]
-        default: transactional
+        options: [contextual, transactional, health]
+        default: contextual
 
 concurrency:
   group: campuscart-main-release
@@ -159,7 +159,7 @@ jobs:
         run: |
           python3 scripts/release_guard.py \
             --revision '${{ needs.update-deployment.outputs.deployment_commit }}' \
-            --mode '${{ inputs.verification_mode || 'transactional' }}'
+            --mode '${{ inputs.verification_mode || 'contextual' }}'
       - name: Save release evidence
         if: always()
         uses: actions/upload-artifact@v4

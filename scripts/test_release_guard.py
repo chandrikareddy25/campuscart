@@ -9,7 +9,7 @@ from unittest.mock import patch
 import release_guard as guard
 
 class ReleaseGuardTests(unittest.TestCase):
-    def scenario(self, mode='transactional', result='passed', newer=False, schema_ok=True, data_changed=False):
+    def scenario(self, mode='transactional', result='passed', newer=False, schema_ok=True, data_changed=False,evidence=None):
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory);(root/'release').mkdir();(root/'k8s').mkdir()
             previous={s:f'ghcr.io/test/campuscart-{s}:previous' for s in ('backend','frontend')}
@@ -21,7 +21,7 @@ class ReleaseGuardTests(unittest.TestCase):
             def fake_git(*args):return 'newer' if newer else 'deployment'
             def commit(message,files):calls.append(message);return 'restored'
             snapshots=[{'orders':'changed'},{'orders':'changed'}] if data_changed else [{'orders':'original'}]*2
-            with patch.multiple(guard,ROOT=root,POLICY=policy,MANIFEST=manifest),patch.object(guard,'schema_hash',return_value='approved' if schema_ok else 'different'),patch.object(guard,'kube',return_value=type('R',(),{'returncode':0})()),patch.object(guard,'wait_release',return_value=True),patch.object(guard,'probe',side_effect=[{'status':result},{'status':'passed'}]),patch.object(guard,'remote_snapshot',side_effect=snapshots),patch.object(guard,'git',side_effect=fake_git),patch.object(guard,'commit_files',side_effect=commit),patch.dict(os.environ,{'RELEASE_TEST_PASSWORD':'not-a-real-secret','RELEASE_BASELINE':json.dumps({'orders':'original'})}),patch('sys.argv',['guard','--revision','deployment','--mode',mode]),contextlib.redirect_stdout(io.StringIO()):
+            with patch.multiple(guard,ROOT=root,POLICY=policy,MANIFEST=manifest),patch.object(guard,'schema_hash',return_value='approved' if schema_ok else 'different'),patch.object(guard,'kube',return_value=type('R',(),{'returncode':0})()),patch.object(guard,'wait_release',return_value=True),patch.object(guard,'probe',side_effect=([evidence]*3+[{'status':'passed'}]) if evidence else [{'status':result},{'status':'passed'}]),patch.object(guard,'remote_snapshot',side_effect=snapshots),patch.object(guard,'git',side_effect=fake_git),patch.object(guard,'commit_files',side_effect=commit),patch.dict(os.environ,{'RELEASE_TEST_PASSWORD':'not-a-real-secret','RELEASE_BASELINE':json.dumps({'orders':'original'})}),patch('sys.argv',['guard','--revision','deployment','--mode',mode]),contextlib.redirect_stdout(io.StringIO()):
                 code=guard.main()
             report=json.loads((root/'release-results/report.json').read_text())
             return code,report,calls,json.loads(policy.read_text()),manifest.read_text()
@@ -39,6 +39,13 @@ class ReleaseGuardTests(unittest.TestCase):
         _,r,c,_,_=self.scenario(schema_ok=False);self.assertEqual(c,[]);self.assertIn('Schema changed',r['reason'])
     def test_changed_business_data_rejects_release(self):
         _,r,c,_,_=self.scenario(data_changed=True);self.assertEqual(r['status'],'recovery_failed');self.assertFalse(r['data_integrity_preserved']);self.assertEqual(len(c),1)
+    def test_contextual_constraint_defers_without_git_mutation(self):
+        code,r,c,_,_=self.scenario(mode='contextual',evidence={'status':'failed','kind':'business_precondition'})
+        self.assertEqual(code,1);self.assertEqual(r['status'],'deferred');self.assertEqual(c,[])
+    def test_contextual_retry_budget_defers_without_git_mutation(self):
+        with patch.object(guard.time,'sleep'):
+            code,r,c,_,_=self.scenario(mode='contextual',evidence={'status':'failed','kind':'http','http_status':503})
+        self.assertEqual(r['status'],'deferred');self.assertEqual(len(r['attempts']),3);self.assertEqual(c,[])
     def test_image_replacement_preserves_database_image(self):
         text='image: postgres:17\nimage: ghcr.io/a/campuscart-backend:one\nimage: ghcr.io/a/campuscart-frontend:one\n'
         out=guard.replace_images(text,{'backend':'ghcr.io/a/campuscart-backend:two','frontend':'ghcr.io/a/campuscart-frontend:two'})
