@@ -1,0 +1,152 @@
+.billing-box {
+  margin: 20px 0;
+  padding: 18px;
+  border: 1px solid #dfe7d4;
+  border-radius: 12px;
+  background: #fbfcf8;
+}
+
+.billing-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+}
+
+.payment-badge {
+  font-size: 11px;
+  padding: 7px 10px;
+  border-radius: 20px;
+  background: #fff0d6;
+  color: #8c641a;
+}
+
+.payment-badge.paid {
+  background: #e6f1d6;
+  color: #4c752a;
+}
+
+.payment-badge.legacy_unrecorded {
+  background: #edf0f3;
+  color: #667482;
+}
+
+.billing-box .table-scroll {
+  margin-top: 15px;
+}
+
+.billing-box td:first-child {
+  white-space: normal;
+  min-width: 120px;
+}
+
+.bill-total {
+  display: flex;
+  justify-content: space-between;
+  font-size: 15px;
+  margin: 17px 0;
+}
+
+.billing-help {
+  font-size: 11px;
+  color: #76876a;
+  line-height: 1.7;
+  margin: 12px 0;
+}
+
+.receipt-links {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.receipt-links p {
+  width: 100%;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.receipt-links .button {
+  font-size: 11px;
+  padding: 10px 15px;
+  text-decoration: none;
+}
+
+.payment-form {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #dfe7d4;
+}
+
+.payment-form h3 {
+  font-size: 16px;
+  margin-bottom: 12px;
+}
+
+.payment-form label {
+  display: block;
+  font-size: 12px;
+  margin: 15px 0;
+}
+
+.payment-form input:not([type=checkbox]),
+.payment-form select {
+  display: block;
+  width: 100%;
+  padding: 11px;
+  margin-top: 7px;
+  border: 1px solid #d2dec7;
+  border-radius: 7px;
+  background: white;
+  font: inherit;
+}
+
+.payment-form .payment-confirm {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  line-height: 1.7;
+}
+
+.payment-confirm input {
+  margin-top: 4px;
+  accent-color: #668f38;
+  flex-shrink: 0;
+}
+
+.billing-summary {
+  margin: 24px 0;
+}
+
+.billing-summary h2 {
+  font-size: 22px;
+}
+
+.billing-summary .stat-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media(max-width: 760px) {
+  .billing-summary .stat-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .billing-box {
+    padding: 14px;
+  }
+
+  .receipt-links {
+    gap: 12px;
+  }
+
+  .billing-heading .text-button {
+    font-size: 11px;
+  }
+
+  .billing-box table {
+    font-size: 10px;
+  }
+}

@@ -1,0 +1,11 @@
+CREATE TABLE IF NOT EXISTS university_brand(id INTEGER PRIMARY KEY CHECK(id=1),name TEXT NOT NULL DEFAULT 'CampusCart University',initials TEXT NOT NULL DEFAULT 'CU',tagline TEXT NOT NULL DEFAULT 'Your campus. Your essentials.');
+INSERT INTO university_brand(id) VALUES(1) ON CONFLICT DO NOTHING;
+CREATE TABLE IF NOT EXISTS pickup_slots(id SERIAL PRIMARY KEY,location_id INTEGER NOT NULL REFERENCES pickup_locations(id),starts_at TIMESTAMPTZ NOT NULL,ends_at TIMESTAMPTZ NOT NULL,capacity INTEGER NOT NULL DEFAULT 12 CHECK(capacity BETWEEN 1 AND 500),booked INTEGER NOT NULL DEFAULT 0 CHECK(booked>=0 AND booked<=capacity),CHECK(ends_at>starts_at),UNIQUE(location_id,starts_at));
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS pickup_slot_id INTEGER REFERENCES pickup_slots(id);
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS collection_token TEXT;
+CREATE UNIQUE INDEX IF NOT EXISTS collection_token_unique ON orders(collection_token) WHERE collection_token IS NOT NULL;
+CREATE TABLE IF NOT EXISTS notifications(id BIGSERIAL PRIMARY KEY,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,title TEXT NOT NULL,message TEXT NOT NULL,order_id UUID REFERENCES orders(id),read_at TIMESTAMPTZ,created_at TIMESTAMPTZ NOT NULL DEFAULT now());
+CREATE INDEX IF NOT EXISTS notifications_user_time ON notifications(user_id,created_at DESC);
+CREATE TABLE IF NOT EXISTS inventory_alert_state(product_id INTEGER PRIMARY KEY REFERENCES products(id),is_low BOOLEAN NOT NULL DEFAULT false);
+INSERT INTO inventory_alert_state(product_id,is_low) SELECT id,stock<=5 AND active FROM products ON CONFLICT DO NOTHING;
+INSERT INTO notifications(user_id,title,message) SELECT u.id,'Low stock: '||p.name,p.stock||' units remaining. Review inventory before accepting more orders.' FROM users u CROSS JOIN products p WHERE u.role='admin' AND p.active AND p.stock<=5;
