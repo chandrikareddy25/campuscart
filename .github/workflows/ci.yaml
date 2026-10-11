@@ -6,6 +6,16 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      verification_mode:
+        description: Release verification mode (health is for comparison experiments)
+        type: choice
+        options: [transactional, health]
+        default: transactional
+
+concurrency:
+  group: campuscart-main-release
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -16,6 +26,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+
+      - name: Test release guard
+        run: python3 -m unittest discover -s scripts -p 'test_*.py' -v
 
       - name: Build backend test image
         run: docker build -t campuscart-test ./backend
@@ -63,9 +76,29 @@ jobs:
         if: github.event_name != 'pull_request'
         run: docker push "${IMAGE}:${GITHUB_SHA}"
 
+  capture-baseline:
+    name: Verify current release and capture business data
+    needs: build
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: [self-hosted, Linux, X64, campuscart]
+    timeout-minutes: 5
+    outputs:
+      baseline: ${{ steps.preflight.outputs.baseline }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Check baseline
+        id: preflight
+        env:
+          RELEASE_TEST_PASSWORD: ${{ secrets.RELEASE_TEST_PASSWORD }}
+        run: |
+          baseline=$(python3 scripts/release_guard.py --preflight)
+          echo "baseline=$baseline" >> "$GITHUB_OUTPUT"
+
   update-deployment:
     name: Update Kubernetes image versions
-    needs: build
+    outputs:
+      deployment_commit: ${{ steps.deploy.outputs.deployment_commit }}
+    needs: [build, capture-baseline]
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
@@ -77,6 +110,7 @@ jobs:
           fetch-depth: 0
 
       - name: Update image tags and push
+        id: deploy
         shell: bash
         run: |
           set -euo pipefail
@@ -90,28 +124,7 @@ jobs:
 
           git reset --hard origin/main
 
-          python3 - <<'PY'
-          import os
-          import re
-          from pathlib import Path
-
-          path = Path("k8s/application.yaml")
-          text = path.read_text()
-          owner = os.environ["GITHUB_REPOSITORY_OWNER"].lower()
-          sha = os.environ["GITHUB_SHA"]
-
-          for service in ("backend", "frontend"):
-              pattern = (
-                  rf"(?m)^(\s*image:\s*)"
-                  rf"(?:ghcr\.io/[^/\s]+/)?campuscart-{service}:[^\s]+"
-              )
-              replacement = rf"\g<1>ghcr.io/{owner}/campuscart-{service}:{sha}"
-              text, count = re.subn(pattern, replacement, text)
-              if count != 1:
-                  raise SystemExit(f"Expected one {service} image line, found {count}")
-
-          path.write_text(text)
-          PY
+          python3 scripts/update_release.py
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -124,3 +137,33 @@ jobs:
 
           git commit -m "Deploy CampusCart images ${GITHUB_SHA}"
           git push origin HEAD:main
+          echo "deployment_commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+  verify-release:
+    name: Verify release and restore on failure
+    needs: [update-deployment, capture-baseline]
+    if: needs.update-deployment.outputs.deployment_commit != ''
+    runs-on: [self-hosted, Linux, X64, campuscart]
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.update-deployment.outputs.deployment_commit }}
+          fetch-depth: 0
+      - name: Verify candidate release
+        env:
+          RELEASE_BASELINE: ${{ needs.capture-baseline.outputs.baseline }}
+          RELEASE_TEST_PASSWORD: ${{ secrets.RELEASE_TEST_PASSWORD }}
+        run: |
+          python3 scripts/release_guard.py \
+            --revision '${{ needs.update-deployment.outputs.deployment_commit }}' \
+            --mode '${{ inputs.verification_mode || 'transactional' }}'
+      - name: Save release evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-evidence-${{ github.run_id }}
+          path: release-results/report.json
+          if-no-files-found: warn

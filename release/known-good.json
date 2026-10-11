@@ -1,0 +1,8 @@
+{
+  "schema_sha256": "99cde4b6d8b044a725ed9a8e68503200fa3cd7671faffb6bd4e0bd2c467024e1",
+  "images": {
+    "backend": "ghcr.io/chandrikareddy25/campuscart-backend:f15e33bfbdc44d671b3dbbc0120bc9079e932ca3",
+    "frontend": "ghcr.io/chandrikareddy25/campuscart-frontend:f15e33bfbdc44d671b3dbbc0120bc9079e932ca3"
+  },
+  "verified_deployment_commit": "bootstrap-current-working-release"
+}
