@@ -231,8 +231,6 @@ def order_detail(conn,order):
     return order
 @app.post('/api/orders',status_code=201)
 def create_order(body:OrderInput,user=Depends(current_user)):
-    # RELEASE EXPERIMENT FAULT
-    raise HTTPException(500, 'Controlled release experiment')
     if not body.pickup_location_id or not body.pickup_slot_id or not body.request_key:raise HTTPException(422,'Choose a pickup location, time slot, and provide a request key')
     with connect() as conn:
         # Serializes same-user checkout, including duplicate request keys.
