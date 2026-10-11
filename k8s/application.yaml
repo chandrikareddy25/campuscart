@@ -103,7 +103,7 @@ spec:
     spec:
       containers:
         - name: backend
-          image: ghcr.io/chandrikareddy25/campuscart-backend:fdf70bd20572f9fbe6ed1ddcc1adde1eea00408e
+          image: ghcr.io/chandrikareddy25/campuscart-backend:11a3152ef7c4ad77620f2adc8cc08d02a92e71de
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8000
@@ -176,7 +176,7 @@ spec:
             - until wget -q -O /dev/null http://backend:8000/health/ready; do sleep 3; done
       containers:
         - name: frontend
-          image: ghcr.io/chandrikareddy25/campuscart-frontend:fdf70bd20572f9fbe6ed1ddcc1adde1eea00408e
+          image: ghcr.io/chandrikareddy25/campuscart-frontend:11a3152ef7c4ad77620f2adc8cc08d02a92e71de
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 80
