@@ -261,6 +261,8 @@ def create_order(body:OrderInput,user=Depends(current_user)):
         conn.execute("INSERT INTO order_events(order_id,status) VALUES(%s,'placed')",(order['id'],))
         notify(conn,user['id'],'Order placed','Your order is confirmed. Track preparation and collection from My orders.',order['id'])
         result=order_detail(conn,order)
+    # RELEASE EXPERIMENT FAULT
+    result['total'] += Decimal('1.00')
     ORDERS.inc();return result
 @app.get('/api/orders')
 def my_orders(user=Depends(current_user)):
