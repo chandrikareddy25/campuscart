@@ -1,8 +1,8 @@
 {
   "schema_sha256": "99cde4b6d8b044a725ed9a8e68503200fa3cd7671faffb6bd4e0bd2c467024e1",
   "images": {
-    "backend": "ghcr.io/chandrikareddy25/campuscart-backend:f15e33bfbdc44d671b3dbbc0120bc9079e932ca3",
-    "frontend": "ghcr.io/chandrikareddy25/campuscart-frontend:f15e33bfbdc44d671b3dbbc0120bc9079e932ca3"
+    "backend": "ghcr.io/chandrikareddy25/campuscart-backend:9035cf55d04c3759af4b5fe8e3ed7934c5c277d8",
+    "frontend": "ghcr.io/chandrikareddy25/campuscart-frontend:9035cf55d04c3759af4b5fe8e3ed7934c5c277d8"
   },
-  "verified_deployment_commit": "bootstrap-current-working-release"
+  "verified_deployment_commit": "100c8329d2ea22d98b072266db0b7e922821b570"
 }
